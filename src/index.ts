@@ -23,12 +23,33 @@ import "@/index.scss";
 import HelloExample from "@/hello.svelte";
 import SettingExample from "@/setting-example.svelte";
 
-import { SettingUtils } from "./libs/setting-utils";
-import { svelteDialog } from "./libs/dialog";
+import {SettingUtils} from "./libs/setting-utils";
+import {svelteDialog} from "./libs/dialog";
 
 const STORAGE_NAME = "menu-config";
 const TAB_TYPE = "custom_tab";
 const DOCK_TYPE = "dock_tab";
+
+function extractAndProcessDate(str: string): number {
+    // 定义正则表达式来匹配 20240112-1203 格式的字符串
+    const regex = /(\d{8})(?:-(\d{4}))?/;
+    const match = str.match(regex);
+
+    if (match) {
+        let dateStr = match[1];
+        let timeStr = match[2] || '1000';
+
+        // 构建完整的日期时间字符串
+        const fullDateTimeStr = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}T${timeStr.slice(0, 2)}:${timeStr.slice(2, 4)}:00`;
+
+        // 将字符串转换为 Date 对象，然后获取时间戳
+        const date = new Date(fullDateTimeStr);
+        return date.getTime();
+    }
+
+    // 如果没有匹配到，返回当前时间的时间戳（这里只是示例，你可以根据需求调整）
+    return new Date().getTime();
+}
 
 export default class PluginSample extends Plugin {
 
@@ -38,9 +59,10 @@ export default class PluginSample extends Plugin {
     private settingUtils: SettingUtils;
 
     async onload() {
-        this.data[STORAGE_NAME] = { readonlyText: "Readonly" };
+        this.data[STORAGE_NAME] = {readonlyText: "Readonly"};
 
         console.log("loading plugin-sample", this.i18n);
+        this.eventBus.on("click-blockicon", this.blockIconEventBindThis);
 
         const frontEnd = getFrontend();
         this.isMobile = frontEnd === "mobile" || frontEnd === "browser-mobile";
@@ -82,7 +104,7 @@ export default class PluginSample extends Plugin {
         statusIconTemp.content.firstElementChild.addEventListener("click", () => {
             confirm("⚠️", this.i18n.confirmRemove.replace("${name}", this.name), () => {
                 this.removeData(STORAGE_NAME).then(() => {
-                    this.data[STORAGE_NAME] = { readonlyText: "Readonly" };
+                    this.data[STORAGE_NAME] = {readonlyText: "Readonly"};
                     showMessage(`[${this.name}]: ${this.i18n.removedData}`);
                 });
             });
@@ -118,7 +140,7 @@ export default class PluginSample extends Plugin {
         this.addDock({
             config: {
                 position: "LeftBottom",
-                size: { width: 200, height: 0 },
+                size: {width: 200, height: 0},
                 icon: "iconSaving",
                 title: "Custom Dock",
                 hotkey: "⌥⌘W",
@@ -168,11 +190,11 @@ export default class PluginSample extends Plugin {
             plugin: this, name: STORAGE_NAME
         });
         this.settingUtils.addItem({
-            key: "Input",
+            key: "Reminder URL",
             value: "",
             type: "textinput",
-            title: "Readonly text",
-            description: "Input description",
+            title: "Reminder URL",
+            description: "Begin with http/https",
             action: {
                 // Called when focus is lost and content changes
                 callback: () => {
@@ -182,6 +204,22 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
+        this.settingUtils.addItem({
+            key: "Reminder Password",
+            value: "",
+            type: "textinput",
+            title: "Reminder Password",
+            description: "",
+            action: {
+                // Called when focus is lost and content changes
+                callback: () => {
+                    // Return data and save it in real time
+                    let value = this.settingUtils.takeAndSave("Input");
+                    console.log(value);
+                }
+            }
+        });
+
         this.settingUtils.addItem({
             key: "InputArea",
             value: "",
@@ -242,7 +280,7 @@ export default class PluginSample extends Plugin {
                 max: 100,
                 step: 1,
             },
-            action:{
+            action: {
                 callback: () => {
                     // Read data in real time
                     let value = this.settingUtils.take("Slider");
@@ -429,28 +467,36 @@ export default class PluginSample extends Plugin {
         });
     }
 
-    private eventBusLog({ detail }: any) {
+    private eventBusLog({detail}: any) {
         console.log(detail);
     }
 
-    private blockIconEvent({ detail }: any) {
+    private blockIconEvent({detail}: any) {
         detail.menu.addItem({
             iconHTML: "",
-            label: this.i18n.removeSpace,
+            label: "Set Reminder",
             click: () => {
                 const doOperations: IOperation[] = [];
+
                 detail.blockElements.forEach((item: HTMLElement) => {
                     const editElement = item.querySelector('[contenteditable="true"]');
                     if (editElement) {
-                        editElement.textContent = editElement.textContent.replace(/ /g, "");
-                        doOperations.push({
-                            id: item.dataset.nodeId,
-                            data: item.outerHTML,
-                            action: "update"
-                        });
+                        // 解析 开头的 字符串, 如果是 类似 20240112-08:04 这种格式的话 , 解析成为具体的时间戳
+                        // 如果是 20240112 这种格式, 就将其时间默认设置为上午10点
+                        // 将结果 log打出来
+                        var result=extractAndProcessDate(editElement.textContent)
+                        result/=1000
+                        console.log(result)
+                        showMessage(`Set Reminder: ${result}`, 1000, "info");
                     }
                 });
                 detail.protyle.getInstance().transaction(doOperations);
+            }
+        });
+        detail.menu.addItem({
+            iconHTML: "",
+            label: "Delete Reminder",
+            click: () => {
             }
         });
     }

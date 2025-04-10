@@ -22,6 +22,7 @@
 
     onMount(async () => {
         ver = await version();
+        console.log(ver)
         fetchPost("/api/system/currentTime", {}, (response) => {
             time = new Date(response.data).toString();
         });
