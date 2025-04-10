@@ -29,8 +29,9 @@ import {svelteDialog} from "./libs/dialog";
 const STORAGE_NAME = "menu-config";
 const TAB_TYPE = "custom_tab";
 const DOCK_TYPE = "dock_tab";
+const REMIDER_ADDR_KEY = "reminder_addr";
 
-function extractAndProcessDate(str: string): number {
+function extractAndProcessDate(str: string): [number, string] {
     // 定义正则表达式来匹配 20240112-1203 格式的字符串
     const regex = /(\d{8})(?:-(\d{4}))?/;
     const match = str.match(regex);
@@ -44,11 +45,11 @@ function extractAndProcessDate(str: string): number {
 
         // 将字符串转换为 Date 对象，然后获取时间戳
         const date = new Date(fullDateTimeStr);
-        return date.getTime();
+        return [date.getTime(), fullDateTimeStr];
     }
 
     // 如果没有匹配到，返回当前时间的时间戳（这里只是示例，你可以根据需求调整）
-    return new Date().getTime();
+    return [0, ""]
 }
 
 export default class PluginSample extends Plugin {
@@ -479,16 +480,15 @@ export default class PluginSample extends Plugin {
                 const doOperations: IOperation[] = [];
 
                 detail.blockElements.forEach((item: HTMLElement) => {
-                    const editElement = item.querySelector('[contenteditable="true"]');
-                    if (editElement) {
-                        // 解析 开头的 字符串, 如果是 类似 20240112-08:04 这种格式的话 , 解析成为具体的时间戳
-                        // 如果是 20240112 这种格式, 就将其时间默认设置为上午10点
-                        // 将结果 log打出来
-                        var result=extractAndProcessDate(editElement.textContent)
-                        result/=1000
-                        console.log(result)
-                        showMessage(`Set Reminder: ${result}`, 1000, "info");
+                    var [result, str] = extractAndProcessDate(item.textContent)
+                    if (result === 0) {
+                        showMessage("Invalid date format", 2000, "error");
+                        return;
                     }
+                    result /= 1000
+                    console.log(result)
+                    showMessage(`Set Reminder: ${result} Origin: ${str}`, 2000, "info");
+                    // item.setAttribute("data-reminder", str);
                 });
                 detail.protyle.getInstance().transaction(doOperations);
             }
@@ -497,6 +497,12 @@ export default class PluginSample extends Plugin {
             iconHTML: "",
             label: "Delete Reminder",
             click: () => {
+                const doOperations: IOperation[] = [];
+                detail.blockElements.forEach((item: HTMLElement) => {
+                    showMessage(`Delete Reminder: ${item.getAttribute(REMIDER_ADDR_KEY)}`, 2000, "info");
+                    item.removeAttribute(REMIDER_ADDR_KEY);
+                });
+                detail.protyle.getInstance().transaction(doOperations);
             }
         });
     }
