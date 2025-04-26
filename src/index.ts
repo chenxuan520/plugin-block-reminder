@@ -191,7 +191,7 @@ export default class PluginSample extends Plugin {
             plugin: this, name: STORAGE_NAME
         });
         this.settingUtils.addItem({
-            key: "Reminder URL",
+            key: "reminder_url",
             value: "",
             type: "textinput",
             title: "Reminder URL",
@@ -200,13 +200,13 @@ export default class PluginSample extends Plugin {
                 // Called when focus is lost and content changes
                 callback: () => {
                     // Return data and save it in real time
-                    let value = this.settingUtils.takeAndSave("Input");
+                    let value = this.settingUtils.takeAndSave("reminder_url");
                     console.log(value);
                 }
             }
         });
         this.settingUtils.addItem({
-            key: "Reminder Password",
+            key: "reminder_pwd",
             value: "",
             type: "textinput",
             title: "Reminder Password",
@@ -285,6 +285,7 @@ export default class PluginSample extends Plugin {
                 callback: () => {
                     // Read data in real time
                     let value = this.settingUtils.take("Slider");
+                    let value = this.settingUtils.takeAndSave("reminder_pwd");
                     console.log(value);
                 }
             }
@@ -488,7 +489,15 @@ export default class PluginSample extends Plugin {
                     result /= 1000
                     console.log(result)
                     showMessage(`Set Reminder: ${result} Origin: ${str}`, 2000, "info");
-                    // item.setAttribute("data-reminder", str);
+                    if (this.settingUtils.get("reminder_url") === "" || this.settingUtils.get("reminder_pwd") === ""
+                        || this.settingUtils.get("reminder_url") === undefined || this.settingUtils.get("reminder_pwd") === undefined) {
+                        showMessage("Reminder URL and Password can not be empty", 2000, "error");
+                        return;
+                    }
+                    AddReminder(this.settingUtils.get("reminder_url"), this.settingUtils.get("reminder_pwd"), item.textContent, result).then(taskName => {
+                        console.log("add " + taskName);
+                        item.setAttribute(REMIDER_ADDR_KEY, taskName);
+                    })
                 });
                 detail.protyle.getInstance().transaction(doOperations);
             }
@@ -499,7 +508,18 @@ export default class PluginSample extends Plugin {
             click: () => {
                 const doOperations: IOperation[] = [];
                 detail.blockElements.forEach((item: HTMLElement) => {
+                    if (this.settingUtils.get("reminder_url") === "" || this.settingUtils.get("reminder_pwd") === ""
+                        || this.settingUtils.get("reminder_url") === undefined || this.settingUtils.get("reminder_pwd") === undefined) {
+                        showMessage("Reminder URL and Password can not be empty", 2000, "error");
+                        return;
+                    }
+                    if (item.getAttribute(REMIDER_ADDR_KEY) === null) {
+                        showMessage("No reminder to delete", 2000, "error");
+                        return;
+                    }
                     showMessage(`Delete Reminder: ${item.getAttribute(REMIDER_ADDR_KEY)}`, 2000, "info");
+                    console.log("del " + item.getAttribute(REMIDER_ADDR_KEY));
+                    DelReminder(this.settingUtils.get("reminder_url"), this.settingUtils.get("reminder_pwd"), item.getAttribute(REMIDER_ADDR_KEY));
                     item.removeAttribute(REMIDER_ADDR_KEY);
                 });
                 detail.protyle.getInstance().transaction(doOperations);
