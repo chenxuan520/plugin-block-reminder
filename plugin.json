@@ -2,7 +2,7 @@
   "name": "plugin-block-reminder",
   "author": "chenxuan520",
   "url": "https://github.com/chenxuan520/plugin-block-reminder",
-  "version": "0.3.7",
+  "version": "0.3.8",
   "minAppVersion": "3.0.8",
   "backends": [
     "windows",

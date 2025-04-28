@@ -8,7 +8,8 @@ import {
     IModel,
     IOperation,
     ICard,
-    ICardData
+    ICardData,
+    Protyle
 } from "siyuan";
 import "@/index.scss";
 
@@ -41,6 +42,24 @@ function extractAndProcessDate(str: string): [number, string] {
 
     // 如果没有匹配到，返回当前时间的时间戳（这里只是示例，你可以根据需求调整）
     return [0, ""]
+}
+
+function formatDateTime(template: string) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    return template
+        .replace('yyyy', year.toString())
+        .replace('MM', month)
+        .replace('dd', day)
+        .replace('HH', hours)
+        .replace('mm', minutes)
+        .replace('ss', seconds);
 }
 
 export default class PluginSample extends Plugin {
@@ -117,6 +136,37 @@ export default class PluginSample extends Plugin {
         } catch (error) {
             console.error("Error loading settings storage, probably empty config json:", error);
         }
+
+        let Templates = {
+            cycle: {
+                filter: ['cycle'],
+                name: 'Reminder Cycle',
+                template: 'yyyyMMdd-HHmm-1'
+            },
+            time: {
+                filter: ['date', 'time', 'now'],
+                name: 'Reminder Time',
+                template: 'yyyyMMdd-HHmm'
+            }
+        };
+
+
+        this.protyleSlash = Object.values(Templates).map((template) => {
+            return {
+                filter: template.filter,
+                html: `<span>${template.name} ${formatDateTime(template.template)}</span>`,
+                id: template.name,
+                callback: (protyle: Protyle) => {
+                    let strnow = formatDateTime(template.template);
+                    console.log(template.name, strnow);
+                    protyle.insert(strnow, false);
+                },
+                //@ts-ignore
+                update() {
+                    this.html = `<span>${template.name} ${formatDateTime(template.template)}</span>`;
+                }
+            }
+        });
 
         console.log(this.i18n.helloPlugin);
     }
@@ -197,9 +247,9 @@ export default class PluginSample extends Plugin {
         });
     }
 
-    
 
-    
+
+
 
     private blockIconEvent({detail}: any) {
         detail.menu.addItem({
@@ -255,6 +305,6 @@ export default class PluginSample extends Plugin {
         });
     }
 
-    
-    
+
+
 }
